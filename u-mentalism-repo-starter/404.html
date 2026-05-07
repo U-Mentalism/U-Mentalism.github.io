@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 — Not Found · U.M.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=EB+Garamond:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: #ffffff;
+    color: #141416;
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse 60% 80% at top left, rgba(31, 95, 184, 0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at bottom right, rgba(184, 58, 58, 0.03) 0%, transparent 60%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='84' height='96' viewBox='0 0 84 96'><g stroke='%231f5fb8' stroke-opacity='0.07' stroke-width='0.85' fill='none' stroke-linecap='round'><path d='M42 48 L42 70'/><path d='M42 48 L18 34'/><path d='M42 48 L66 34'/></g></svg>");
+    background-attachment: fixed, fixed, fixed;
+  }
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem 1.5rem;
+  }
+  .logo {
+    width: 90px;
+    margin-bottom: 2.5rem;
+    user-select: none;
+  }
+  .num {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(5rem, 14vw, 9rem);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    color: #1f5fb8;
+    margin-bottom: 0.5rem;
+  }
+  .msg {
+    font-style: italic;
+    color: #6a6b70;
+    font-size: 1.25rem;
+    margin-bottom: 2.5rem;
+    max-width: 30em;
+  }
+  .actions {
+    display: flex;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 4rem;
+  }
+  a.btn {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: #1f5fb8;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-decoration: none;
+    border: 1px solid #1f5fb8;
+    padding: 0.75em 1.5em;
+    transition: all 0.15s;
+  }
+  a.btn:hover { background: #1f5fb8; color: #ffffff; }
+  a.btn.ghost { color: #6a6b70; border-color: #cbcbd1; }
+  a.btn.ghost:hover { color: #b83a3a; border-color: #b83a3a; background: transparent; }
+
+  .quote {
+    font-style: italic;
+    color: #a8a9b0;
+    font-size: 1rem;
+    line-height: 1.55;
+    max-width: 32em;
+    border-top: 1px solid #e2e3e8;
+    padding-top: 2rem;
+  }
+  .quote .attr {
+    display: block;
+    margin-top: 0.5em;
+    font-size: 0.85rem;
+    font-style: normal;
+    letter-spacing: 0.05em;
+    color: #6a6b70;
+  }
+</style>
+</head>
+<body>
+  <img class="logo" src="assets/logo.png" alt="U.M.">
+  <div class="num">404</div>
+  <div class="msg">This page is not in the codex. The link you followed has no referent on this site.</div>
+  <div class="actions">
+    <a class="btn" href="/">↩ Return to the notebook</a>
+    <a class="btn ghost" href="https://github.com/U-Mentalism" target="_blank" rel="noopener">github.com/U-Mentalism</a>
+  </div>
+  <div class="quote">
+    "Thought was born blind, but Thought knows what is seeing."
+    <span class="attr">— Fernando Pessoa, <em>35 Sonnets</em></span>
+  </div>
+</body>
+</html>
