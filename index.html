@@ -154,6 +154,10 @@ body {
   color: var(--ink);
 }
 
+.tab-btn:active {
+  background: rgba(31, 95, 184, 0.10);
+}
+
 .tab-btn.active {
   background: var(--paper);
   border-left-color: var(--accent);
@@ -972,6 +976,10 @@ body {
   }
   .tab-header h1 { font-size: 1.6rem; }
   .pdf-display { height: 500px; }
+  .tab-btn {
+    -webkit-tap-highlight-color: rgba(31, 95, 184, 0.20);
+    padding: 0.85rem 0.6rem;
+  }
 }
 
 @media print {
@@ -1259,6 +1267,15 @@ function selectTab(id) {
   currentTab = TABS.find(t => t.id === id);
   renderTabContent();
   lsSet('lastTab', String(id));
+
+  // On mobile the sidebar sits above the content; scroll the new tab into view
+  // so the user actually sees the change instead of staying parked on the tab list.
+  if (window.matchMedia('(max-width: 900px)').matches) {
+    requestAnimationFrame(() => {
+      const c = document.getElementById('content');
+      if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
 }
 
 let currentTab = TABS[0];
