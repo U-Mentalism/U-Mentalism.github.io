@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>U-Mentalism — A Long-Form Research Project</title>
 
+<link rel="icon" type="image/png" href="assets/cube.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -292,6 +295,30 @@ body {
   font-size: 1.1rem;
   color: var(--muted);
   font-weight: 400;
+}
+
+.tab-jump {
+  margin-top: 1rem;
+}
+
+.tab-jump-link {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--rule);
+  padding: 0.4rem 0.85rem;
+  border-radius: 2px;
+  transition: all 0.15s;
+}
+
+.tab-jump-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(31, 95, 184, 0.04);
 }
 
 /* ===== SECTION CARDS ===== */
@@ -1284,10 +1311,13 @@ function renderTabContent() {
   const t = currentTab;
   const content = document.getElementById('content');
   content.innerHTML = `
-    <header class="tab-header">
+   <header class="tab-header">
       <div class="numeral">${t.addendum ? 'Addendum' : 'Tabula ' + t.numeral}</div>
       <h1>${escapeHtml(t.title)}</h1>
       <div class="subtitle">${escapeHtml(t.subtitle)}</div>
+      <div class="tab-jump">
+        <a href="#reflectSection" class="tab-jump-link" data-jump-to="reflectSection">§ Skip to Notes ↓</a>
+      </div>
     </header>
 
     <section class="section" id="pdfSection">
@@ -1564,6 +1594,15 @@ function bindTabContent() {
   });
   document.getElementById('repoUrl').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') saveRepoUrl();
+  });
+
+  // Jump link in tab header — smooth scroll to the Notes section
+  document.querySelectorAll('[data-jump-to]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.getElementById(link.dataset.jumpTo);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   });
 }
 
