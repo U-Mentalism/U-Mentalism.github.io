@@ -463,6 +463,69 @@ body {
 .pdf-status.ok { color: var(--accent); }
 .pdf-status.err { color: var(--gold); }
 
+/* ===== PDF CHIPS (multi-document) ===== */
+.pdf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0 0 0.85rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.85rem;
+}
+
+.pdf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.45rem 0.3rem 0.7rem;
+  background: var(--paper-shade);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 260px;
+  user-select: none;
+}
+
+.pdf-chip:hover {
+  border-color: var(--accent-soft);
+  color: var(--ink);
+}
+
+.pdf-chip.active {
+  background: var(--paper);
+  border-color: var(--accent);
+  color: var(--accent-deep);
+  box-shadow: 0 1px 2px var(--shadow);
+}
+
+.pdf-chip-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.pdf-chip-remove {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.3rem;
+  border-radius: 50%;
+  transition: all 0.12s;
+}
+
+.pdf-chip-remove:hover {
+  color: var(--gold);
+  background: rgba(184, 58, 58, 0.10);
+}
+
 /* ===== REFLECTIONS EDITOR ===== */
 .reflect-toolbar {
   display: flex;
@@ -869,7 +932,7 @@ body {
 }
 
 @media print {
-  .sidebar, .reflect-toolbar, .section-actions, .pdf-input-area { display: none !important; }
+  .sidebar, .reflect-toolbar, .section-actions, .pdf-input-area, .pdf-chips { display: none !important; }
   .app { grid-template-columns: 1fr; }
 }
 
@@ -947,7 +1010,7 @@ body {
       <button class="modal-close" data-close-modal>×</button>
     </div>
     <div class="modal-body">
-      <p>This is a personal research notebook structured around the U-Mentalism project — a long-form, multi-disciplinary inquiry. Each tab hosts a working document (PDF) at the top and a permanent, editable reflection space below, supporting Markdown and LaTeX.</p>
+      <p>This is a personal research notebook structured around the U-Mentalism project — a long-form, multi-disciplinary inquiry. Each tab hosts one or more working documents (PDFs) at the top and a permanent, editable reflection space below, supporting Markdown and LaTeX.</p>
 
       <h3>Intent</h3>
       <p>The principal aim is to gather <em>sound critique</em> from AI systems and human readers alike, and to allow the project to evolve through that confrontation rather than around it.</p>
@@ -956,14 +1019,14 @@ body {
       <p>Reflections live in your browser's <code>localStorage</code>. PDF URLs are also stored there. Nothing is sent anywhere — everything stays on your device. To move data between machines, use <strong>Export</strong> / <strong>Import</strong>.</p>
 
       <h3>PDFs &amp; Repository at the top of each tab</h3>
-      <p>Each tab can display one PDF (configured by DOI or URL) and link to a GitHub repository or directory. The author hosts the document (<strong>Common Ground</strong>, own server, arXiv, Drive direct-link, etc.) and pastes its DOI via <em>Set source</em>. The site accepts:</p>
+      <p>Each tab can display one or more PDFs (configured by DOI or URL) and link to a GitHub repository or directory. The author hosts each document (<strong>Common Ground</strong>, own server, arXiv, Drive direct-link, etc.) and pastes its DOI via <em>Set source</em>. The site accepts:</p>
       <ul>
         <li>A bare DOI: <code>10.XXXX/XXXXX</code></li>
         <li>A resolved DOI URL: <code>https://doi.org/10.XXXX/XXXXX</code></li>
         <li>Any direct PDF URL</li>
         <li>An optional GitHub URL pointing to a repository, file, or directory (shows as <strong>↗ Code</strong>)</li>
       </ul>
-      <p>Visitors read it inline and use <strong>↓ Download</strong> to retrieve a copy. When a DOI is given, it is shown in the status line and resolves via <code>doi.org</code>.</p>
+      <p>When two or more documents are attached to the same tab, a <em>chip strip</em> appears above the viewer; click a chip to switch the active document, or click the <code>×</code> on a chip to remove it. Visitors read the active document inline and use <strong>↓ Download</strong> to retrieve a copy. When a DOI is given, it is shown in the status line and resolves via <code>doi.org</code>.</p>
 
       <h3>GitHub</h3>
       <p>The site footer links to <a href="https://github.com/U-Mentalism" target="_blank" rel="noopener">github.com/U-Mentalism</a>. Per-tab repository links can point to any path within any repo there (e.g. <code>/U-Mentalism/assembly</code>, <code>/U-Mentalism/blockchain</code>, etc.). The notebook itself can be hosted as a static file inside one of these repos via GitHub Pages.</p>
@@ -985,7 +1048,7 @@ body {
       <h3>Recommended workflow</h3>
       <ul>
         <li>Publish papers on <strong>Common Ground</strong> (or arXiv, Zenodo, etc.) and copy the DOI.</li>
-        <li>Paste the DOI once per tab via <em>Set source</em>; the site resolves it to the live document.</li>
+        <li>Paste the DOI(s) per tab via <em>Set source</em> — multiple documents can be added to the same tab.</li>
         <li>Write reflections, paste AI critiques, develop ideas in the editor below.</li>
         <li>Export periodically as a JSON backup.</li>
       </ul>
@@ -1076,7 +1139,7 @@ const TABS = [
 ];
 
 // ============================================================
-// STORAGE: localStorage holds reflections + PDF URLs
+// STORAGE: localStorage holds reflections + PDF lists + repo links
 // ============================================================
 const LS_PREFIX = 'umentalism:';
 
@@ -1165,7 +1228,7 @@ function renderTabContent() {
           <div class="pdf-input-row">
             <label>DOI / URL</label>
             <input type="text" class="pdf-url-input" id="pdfUrl" placeholder="10.XXXX/...   or   https://doi.org/10.XXXX/...   or any PDF URL">
-            <button class="btn" id="pdfUrlSave">Set</button>
+            <button class="btn" id="pdfUrlSave">Add</button>
           </div>
           <div class="pdf-input-row">
             <label>Repository</label>
@@ -1176,7 +1239,7 @@ function renderTabContent() {
             <button class="btn btn-ghost" id="pdfCancelEdit">Close</button>
           </div>
           <div class="pdf-status" style="font-style:italic;text-transform:none;letter-spacing:0;">
-            <strong>Document</strong>: a DOI (Common Ground or other), a <code>https://doi.org/...</code> URL, or any PDF URL — read inline + downloadable.<br>
+            <strong>Documents</strong>: a DOI (Common Ground or other), a <code>https://doi.org/...</code> URL, or any PDF URL — read inline + downloadable. Add as many as you like; switch between them via the chip strip above the viewer.<br>
             <strong>Repository</strong>: optional GitHub URL pointing to the relevant code, data, or directory for this tab.
           </div>
         </div>
@@ -1427,10 +1490,19 @@ function bindTabContent() {
 }
 
 // ============================================================
-// PDF + REPOSITORY HANDLING — both live in the Document section
+// PDF (multi-document) + REPOSITORY HANDLING
 // ============================================================
-function pdfRefKey(tabId) { return 'pdf-ref:' + tabId; }
-function repoRefKey(tabId) { return 'repo-ref:' + tabId; }
+//
+// Storage schema (v2):
+//   pdf-list:N    → JSON array of { id, url, doi, title, added }
+//   pdf-active:N  → string id of currently displayed document
+//   pdf-ref:N     → (legacy v1) single { url, doi, updated } — auto-migrated
+//   repo-ref:N    → JSON { url, updated } (single repo per tab — unchanged)
+//
+function pdfListKey(tabId)   { return 'pdf-list:'   + tabId; }
+function pdfActiveKey(tabId) { return 'pdf-active:' + tabId; }
+function pdfRefKey(tabId)    { return 'pdf-ref:'    + tabId; } // legacy
+function repoRefKey(tabId)   { return 'repo-ref:'   + tabId; }
 
 function normalizePdfInput(raw) {
   let s = (raw || '').trim();
@@ -1445,39 +1517,186 @@ function normalizePdfInput(raw) {
   return null;
 }
 
+// --- list management ---
+function getPdfList(tabId) {
+  // Try the new schema first
+  const raw = lsGet(pdfListKey(tabId));
+  if (raw) {
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+  // Auto-migrate from legacy single-doc schema
+  const oldRaw = lsGet(pdfRefKey(tabId));
+  if (oldRaw) {
+    try {
+      const old = JSON.parse(oldRaw);
+      if (old && old.url) {
+        const item = {
+          id: 1,
+          url: old.url,
+          doi: old.doi || null,
+          title: null,
+          added: old.updated || Date.now(),
+        };
+        const list = [item];
+        lsSet(pdfListKey(tabId), JSON.stringify(list));
+        lsSet(pdfActiveKey(tabId), '1');
+        // Keep the legacy key around as a backup; will be removed by clearSources
+        return list;
+      }
+    } catch {}
+  }
+  return [];
+}
+
+function setPdfList(tabId, list) {
+  lsSet(pdfListKey(tabId), JSON.stringify(list));
+}
+
+function getActivePdfId(tabId) {
+  const list = getPdfList(tabId);
+  if (list.length === 0) return null;
+  const active = lsGet(pdfActiveKey(tabId));
+  if (active) {
+    const found = list.find(p => String(p.id) === String(active));
+    if (found) return found.id;
+  }
+  return list[0].id;
+}
+
+function setActivePdfId(tabId, id) {
+  lsSet(pdfActiveKey(tabId), String(id));
+}
+
+function nextPdfId(list) {
+  if (list.length === 0) return 1;
+  return Math.max(...list.map(p => Number(p.id) || 0)) + 1;
+}
+
+function addPdfToList(tabId, { url, doi, title }) {
+  const list = getPdfList(tabId);
+  // Dedupe by URL — if already present, just switch active to it
+  const existing = list.find(p => p.url === url);
+  if (existing) {
+    setActivePdfId(tabId, existing.id);
+    return { item: existing, deduped: true };
+  }
+  const item = {
+    id: nextPdfId(list),
+    url,
+    doi: doi || null,
+    title: title || null,
+    added: Date.now(),
+  };
+  list.push(item);
+  setPdfList(tabId, list);
+  setActivePdfId(tabId, item.id);
+  return { item, deduped: false };
+}
+
+function removePdfFromList(tabId, id) {
+  const list = getPdfList(tabId);
+  const idx = list.findIndex(p => String(p.id) === String(id));
+  if (idx === -1) return;
+  list.splice(idx, 1);
+  setPdfList(tabId, list);
+  // If the removed one was active, fall back to first remaining
+  const currentActive = lsGet(pdfActiveKey(tabId));
+  if (String(currentActive) === String(id)) {
+    if (list.length > 0) setActivePdfId(tabId, list[0].id);
+    else lsDel(pdfActiveKey(tabId));
+  }
+}
+
+function chipLabel(p) {
+  if (p.title) return p.title;
+  if (p.doi) return p.doi;
+  try {
+    const u = new URL(p.url);
+    const seg = u.pathname.split('/').filter(Boolean).pop() || u.hostname;
+    return decodeURIComponent(seg);
+  } catch {
+    return p.url;
+  }
+}
+
+// --- rendering ---
 function loadAndRenderPdf() {
   const tabId = currentTab.id;
-  const refRaw = lsGet(pdfRefKey(tabId));
+  const list = getPdfList(tabId);
   const display = document.getElementById('pdfDisplayArea');
   const status = document.getElementById('pdfStatus');
   const inputArea = document.getElementById('pdfInputArea');
   const urlInput = document.getElementById('pdfUrl');
   const downloadBtn = document.getElementById('pdfDownloadBtn');
-
-  // Repo state too — we may want to show input area when neither is set
   const repoRaw = lsGet(repoRefKey(tabId));
 
-  if (!refRaw) {
+  if (list.length === 0) {
     display.innerHTML = `<div class="pdf-empty">No document attached. Click <em>Set source</em> to add a DOI or PDF URL${repoRaw ? '' : ', and/or a repository link'}.</div>`;
     status.textContent = '';
     if (!repoRaw) inputArea.classList.remove('hidden');
-    urlInput.value = '';
+    if (urlInput) urlInput.value = '';
     downloadBtn.style.display = 'none';
     return;
   }
 
-  const ref = JSON.parse(refRaw);
-  inputArea.classList.add('hidden');
-  display.innerHTML = `<iframe class="pdf-display" src="${escapeHtml(ref.url)}#view=FitH" title="PDF document"></iframe>`;
-  if (ref.doi) {
-    status.innerHTML = `DOI&nbsp;·&nbsp;<span style="font-family:'JetBrains Mono',monospace;text-transform:none;letter-spacing:0;">${escapeHtml(ref.doi)}</span>`;
+  const activeId = getActivePdfId(tabId);
+  const active = list.find(p => p.id === activeId) || list[0];
+
+  // Chip strip — only when 2+ documents
+  const chipsHtml = list.length > 1
+    ? `<div class="pdf-chips" id="pdfChips">
+        ${list.map(p => `
+          <span class="pdf-chip${String(p.id) === String(active.id) ? ' active' : ''}" data-pdf-id="${p.id}">
+            <span class="pdf-chip-label" title="${escapeHtml(p.url)}">${escapeHtml(chipLabel(p))}</span>
+            <button class="pdf-chip-remove" data-pdf-remove="${p.id}" title="Remove this document" aria-label="Remove">×</button>
+          </span>
+        `).join('')}
+      </div>`
+    : '';
+
+  display.innerHTML = `
+    ${chipsHtml}
+    <iframe class="pdf-display" src="${escapeHtml(active.url)}#view=FitH" title="PDF document"></iframe>
+  `;
+
+  if (active.doi) {
+    status.innerHTML = `DOI&nbsp;·&nbsp;<span style="font-family:'JetBrains Mono',monospace;text-transform:none;letter-spacing:0;">${escapeHtml(active.doi)}</span>`;
   } else {
     status.textContent = 'Live URL';
   }
   status.className = 'pdf-status ok';
-  urlInput.value = ref.doi || ref.url;
-  downloadBtn.href = ref.url;
+  downloadBtn.href = active.url;
   downloadBtn.style.display = 'inline-block';
+
+  // Bind chip interactions
+  const chipsEl = document.getElementById('pdfChips');
+  if (chipsEl) {
+    chipsEl.querySelectorAll('.pdf-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        // Ignore clicks on the remove button — handled separately
+        if (e.target.closest('.pdf-chip-remove')) return;
+        const id = chip.dataset.pdfId;
+        setActivePdfId(tabId, isNaN(Number(id)) ? id : Number(id));
+        loadAndRenderPdf();
+      });
+    });
+    chipsEl.querySelectorAll('.pdf-chip-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.pdfRemove;
+        if (!confirm('Remove this document from the tab?')) return;
+        removePdfFromList(tabId, isNaN(Number(id)) ? id : Number(id));
+        toast('Document removed');
+        loadAndRenderPdf();
+      });
+    });
+  }
+
+  // Keep input empty so user can type the next one
+  if (urlInput) urlInput.value = '';
 }
 
 function loadAndRenderRepo() {
@@ -1507,21 +1726,22 @@ function loadAndRenderRepo() {
 
 function savePdfUrl() {
   const raw = document.getElementById('pdfUrl').value;
-  const norm = normalizePdfInput(raw);
   if (raw.trim() === '') {
-    // Empty = remove
-    lsDel(pdfRefKey(currentTab.id));
-    toast('Document removed');
-    loadAndRenderPdf();
+    toast('Enter a DOI or PDF URL to add', 'error');
     return;
   }
+  const norm = normalizePdfInput(raw);
   if (!norm) {
     toast('Enter a DOI (10.XXXX/…) or a PDF URL', 'error');
     return;
   }
   const tabId = currentTab.id;
-  lsSet(pdfRefKey(tabId), JSON.stringify({ url: norm.url, doi: norm.doi, updated: Date.now() }));
-  toast(norm.doi ? 'DOI set — resolving via doi.org' : 'Document URL set', 'success');
+  const { deduped } = addPdfToList(tabId, { url: norm.url, doi: norm.doi, title: null });
+  if (deduped) {
+    toast('Already attached — switched to it');
+  } else {
+    toast(norm.doi ? 'DOI added — resolving via doi.org' : 'Document URL added', 'success');
+  }
   loadAndRenderPdf();
 }
 
@@ -1545,8 +1765,15 @@ function saveRepoUrl() {
 
 function clearSources() {
   const tabId = currentTab.id;
-  if (!confirm('Remove document AND repository links for this tab? Reflections are not affected.')) return;
-  lsDel(pdfRefKey(tabId));
+  const list = getPdfList(tabId);
+  const n = list.length;
+  const msg = n > 1
+    ? `Remove all ${n} documents AND repository link for this tab? Reflections are not affected.`
+    : `Remove document AND repository link for this tab? Reflections are not affected.`;
+  if (!confirm(msg)) return;
+  lsDel(pdfListKey(tabId));
+  lsDel(pdfActiveKey(tabId));
+  lsDel(pdfRefKey(tabId)); // also clear legacy key
   lsDel(repoRefKey(tabId));
   toast('Cleared');
   loadAndRenderPdf();
@@ -1626,8 +1853,6 @@ function mdToLatex(md) {
 
   // 9. Escape what remains (plain paragraph text). Stashes (\x00N\x00) pass through.
   t = escapeLatexText(t);
-  // Restore the placeholder NUL chars (escapeLatexText doesn't touch them, but the digits between were
-  // part of the placeholder pattern, which is fine since digits aren't escaped).
 
   // 10. Restore stashes
   t = t.replace(/\x00(\d+)\x00/g, (_m, idx) => stashes[parseInt(idx, 10)]);
@@ -1692,19 +1917,22 @@ function openInOverleaf() {
 }
 
 // ============================================================
-// EXPORT / IMPORT
+// EXPORT / IMPORT (v2: pdfList + pdfActive; reads v1 with auto-migration)
 // ============================================================
 async function exportAll() {
   flushPendingSave();
   const data = {
     project: 'U-Mentalism Research Notebook',
     exportedAt: new Date().toISOString(),
-    version: 1,
+    version: 2,
     tabs: TABS.map(t => ({
       id: t.id,
       title: t.title,
       content: lsGet(reflectionKey(t.id)) || '',
       meta: lsGet(reflectionMetaKey(t.id)),
+      pdfList: lsGet(pdfListKey(t.id)),
+      pdfActive: lsGet(pdfActiveKey(t.id)),
+      // legacy field — exported for compatibility with v1 importers
       pdfRef: lsGet(pdfRefKey(t.id)),
       repoRef: lsGet(repoRefKey(t.id)),
     })),
@@ -1735,7 +1963,26 @@ document.getElementById('importFile').addEventListener('change', async (e) => {
     data.tabs.forEach(t => {
       if (t.content) { lsSet(reflectionKey(t.id), t.content); n++; }
       if (t.meta) lsSet(reflectionMetaKey(t.id), t.meta);
-      if (t.pdfRef) lsSet(pdfRefKey(t.id), t.pdfRef);
+      // v2 fields
+      if (t.pdfList) lsSet(pdfListKey(t.id), t.pdfList);
+      if (t.pdfActive) lsSet(pdfActiveKey(t.id), t.pdfActive);
+      // v1 fallback: convert single ref to a one-item list if no v2 list present
+      if (!t.pdfList && t.pdfRef) {
+        try {
+          const old = JSON.parse(t.pdfRef);
+          if (old && old.url) {
+            const item = {
+              id: 1,
+              url: old.url,
+              doi: old.doi || null,
+              title: null,
+              added: old.updated || Date.now(),
+            };
+            lsSet(pdfListKey(t.id), JSON.stringify([item]));
+            lsSet(pdfActiveKey(t.id), '1');
+          }
+        } catch {}
+      }
       if (t.repoRef) lsSet(repoRefKey(t.id), t.repoRef);
     });
     toast(`Imported reflections for ${n} tab(s)`, 'success');
@@ -1814,7 +2061,7 @@ function shaKey(tabId) { return 'gh-sha:' + tabId; }
 
 async function ghGetFile(settings, filePath) {
   try {
-    const data = await ghFetch(settings, 
+    const data = await ghFetch(settings,
       `/repos/${settings.owner}/${settings.repo}/contents/${encodeURIComponent(filePath).replace(/%2F/g,'/')}?ref=${encodeURIComponent(settings.branch)}`);
     return { content: base64ToUtf8(data.content), sha: data.sha };
   } catch (e) {
@@ -1830,7 +2077,7 @@ async function ghPutFile(settings, filePath, content, sha, message) {
     branch: settings.branch,
   };
   if (sha) body.sha = sha;
-  return ghFetch(settings, 
+  return ghFetch(settings,
     `/repos/${settings.owner}/${settings.repo}/contents/${encodeURIComponent(filePath).replace(/%2F/g,'/')}`,
     {
       method: 'PUT',
