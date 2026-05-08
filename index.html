@@ -467,39 +467,82 @@ body {
 .pdf-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0 0 0.85rem;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0 0.95rem;
   border-bottom: 1px solid var(--rule);
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.95rem;
+}
+
+.pdf-chips-label {
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-right: 0.4rem;
+  user-select: none;
 }
 
 .pdf-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.3rem 0.45rem 0.3rem 0.7rem;
+  padding: 0.4rem 0.55rem 0.4rem 0.85rem;
   background: var(--paper-shade);
   border: 1px solid var(--rule);
-  border-radius: 14px;
+  border-radius: 16px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  color: var(--ink-soft);
+  font-size: 0.76rem;
+  color: var(--muted);
   cursor: pointer;
   transition: all 0.15s;
-  max-width: 260px;
+  max-width: 280px;
   user-select: none;
 }
 
 .pdf-chip:hover {
+  background: var(--paper);
   border-color: var(--accent-soft);
   color: var(--ink);
 }
 
 .pdf-chip.active {
-  background: var(--paper);
+  background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-deep);
-  box-shadow: 0 1px 2px var(--shadow);
+  color: var(--paper);
+  box-shadow: 0 2px 6px rgba(31, 95, 184, 0.25);
+  font-weight: 500;
+}
+
+.pdf-chip.active .pdf-chip-remove {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.pdf-chip.active .pdf-chip-remove:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* Mobile-only fallback link, visible when iframe PDF rendering fails (iOS Safari etc.) */
+.pdf-mobile-open { display: none; }
+@media (max-width: 900px) {
+  .pdf-mobile-open {
+    display: block;
+    margin: 0 0 0.85rem;
+    padding: 0.9rem 1rem;
+    background: var(--accent);
+    color: var(--paper);
+    text-align: center;
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    box-shadow: 0 2px 6px rgba(31, 95, 184, 0.25);
+  }
+  .pdf-mobile-open:hover, .pdf-mobile-open:active { background: var(--accent-deep); }
 }
 
 .pdf-chip-label {
@@ -1126,14 +1169,32 @@ body {
 // TAB DEFINITIONS
 // ============================================================
 const TABS = [
-  { id: 1, numeral: 'I',    title: 'Philosophia Naturalis / Philosophia Artificialis', subtitle: 'On nature and the artificial' },
-  { id: 2, numeral: 'II',   title: 'Computer Architecture & Photonics',                subtitle: 'An advanced computational model' },
+  { id: 1, numeral: 'I',    title: 'Philosophia Naturalis / Philosophia Artificialis', subtitle: 'On nature and the artificial',
+    defaultPdfs: [
+      { url: 'https://www.u-mentalism.com/papers/2019-jacn-what-is-u-mentalism.pdf',
+        doi: '10.18178/jacn.2019.7.1.266',
+        title: 'What is U-Mentalism? — JACN, 2019' },
+    ] },
+  { id: 2, numeral: 'II',   title: 'Computer Architecture & Photonics',                subtitle: 'An advanced computational model',
+    defaultPdfs: [
+      { url: 'https://www.u-mentalism.com/papers/2021-wo-u-mentalism-patent.pdf',
+        doi: null,
+        title: 'WO 2021/235960 — U-Mentalism patent' },
+      { url: 'https://www.u-mentalism.com/papers/2021-ijwest-cinematic-supercomputation.pdf',
+        doi: '10.5121/ijwest.2021.12101',
+        title: 'Cinematic Supercomputation — IJWesT, 2021' },
+    ] },
   { id: 3, numeral: 'III',  title: 'Universal Assembly Language',                      subtitle: 'Universal Assembly Programming Language',
     defaultRepo: 'https://github.com/U-Mentalism/U.-M.-Assembly-Programming-Language' },
   { id: 4, numeral: 'IV',   title: 'Blockchain Economy',                               subtitle: 'Trust, ledger, and the form of value' },
   { id: 5, numeral: 'V',    title: 'Cities & Energy',                                  subtitle: 'Integrating solar energy, photonics, and computation' },
   { id: 6, numeral: 'VI',   title: 'Ethics & Neuroscience',                            subtitle: 'The mind, the brain, and moral inquiry' },
-  { id: 7, numeral: 'VII',  title: 'Enlightenment / Cybernetica',                       subtitle: 'Cultural studies between the classical and the cybernetic' },
+  { id: 7, numeral: 'VII',  title: 'Enlightenment / Cybernetica',                       subtitle: 'Cultural studies between the classical and the cybernetic',
+    defaultPdfs: [
+      { url: 'https://www.u-mentalism.com/papers/2021-ieee-prolegomena-cybernetic-reason.pdf',
+        doi: '10.1109/21CW48944.2021.9532531',
+        title: 'Prolegomena to a Critique of Cybernetic Reason — IEEE, 2021' },
+    ] },
   { id: 8, numeral: '·',    title: 'Indice / Codex',                                    subtitle: 'Addendum — frame, film, code', addendum: true,
     defaultRepo: 'https://github.com/U-Mentalism/Entreacte' },
 ];
@@ -1527,7 +1588,7 @@ function getPdfList(tabId) {
       return Array.isArray(arr) ? arr : [];
     } catch { return []; }
   }
-  // Auto-migrate from legacy single-doc schema
+ // Auto-migrate from legacy single-doc schema
   const oldRaw = lsGet(pdfRefKey(tabId));
   if (oldRaw) {
     try {
@@ -1548,9 +1609,19 @@ function getPdfList(tabId) {
       }
     } catch {}
   }
+  // Fall back to TABS-defined defaults — published canonical set, visible to any visitor
+  const tab = TABS.find(t => t.id === tabId);
+  if (tab && Array.isArray(tab.defaultPdfs) && tab.defaultPdfs.length > 0) {
+    return tab.defaultPdfs.map((p, idx) => ({
+      id: idx + 1,
+      url: p.url,
+      doi: p.doi || null,
+      title: p.title || null,
+      added: 0,
+    }));
+  }
   return [];
 }
-
 function setPdfList(tabId, list) {
   lsSet(pdfListKey(tabId), JSON.stringify(list));
 }
@@ -1645,9 +1716,10 @@ function loadAndRenderPdf() {
   const activeId = getActivePdfId(tabId);
   const active = list.find(p => p.id === activeId) || list[0];
 
-  // Chip strip — only when 2+ documents
+ // Chip strip — only when 2+ documents
   const chipsHtml = list.length > 1
     ? `<div class="pdf-chips" id="pdfChips">
+        <span class="pdf-chips-label">Documents</span>
         ${list.map(p => `
           <span class="pdf-chip${String(p.id) === String(active.id) ? ' active' : ''}" data-pdf-id="${p.id}">
             <span class="pdf-chip-label" title="${escapeHtml(p.url)}">${escapeHtml(chipLabel(p))}</span>
@@ -1659,6 +1731,7 @@ function loadAndRenderPdf() {
 
   display.innerHTML = `
     ${chipsHtml}
+    <a class="pdf-mobile-open" href="${escapeHtml(active.url)}" target="_blank" rel="noopener">↗ Open PDF in a new tab</a>
     <iframe class="pdf-display" src="${escapeHtml(active.url)}#view=FitH" title="PDF document"></iframe>
   `;
 
