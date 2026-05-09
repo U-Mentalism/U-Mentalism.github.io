@@ -2077,8 +2077,10 @@ window.clearPdf = clearSources; // back-compat alias
 // OVERLEAF EXPORT — markdown+LaTeX → full LaTeX document → form POST
 // ============================================================
 function escapeLatexText(s) {
+  // Stash backslash as a placeholder so the {} we will insert in \textbackslash{}
+  // do not get re-escaped by the brace replacements that follow. Restore at the end.
   return s
-    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/\\/g, '\x01BS\x01')
     .replace(/\{/g, '\\{')
     .replace(/\}/g, '\\}')
     .replace(/#/g, '\\#')
@@ -2087,7 +2089,8 @@ function escapeLatexText(s) {
     .replace(/&/g, '\\&')
     .replace(/_/g, '\\_')
     .replace(/\^/g, '\\textasciicircum{}')
-    .replace(/~/g, '\\textasciitilde{}');
+    .replace(/~/g, '\\textasciitilde{}')
+    .replace(/\x01BS\x01/g, '\\textbackslash{}');
 }
 
 function mdToLatex(md) {
@@ -2097,6 +2100,10 @@ function mdToLatex(md) {
   const stash = (s) => `\x00${stashes.push(s) - 1}\x00`;
 
   let t = md;
+
+  // 0. Pre-stash Markdown-escaped dollar signs as LaTeX literal $ so the math
+  //    regex below cannot capture across them.
+  t = t.replace(/\\\$/g, () => stash('\\$'));
 
   // 1. Stash math FIRST (so $ inside isn't escaped later)
   t = t.replace(/\$\$([\s\S]+?)\$\$/g, (_m, x) => stash(`\\[${x}\\]`));
@@ -2144,8 +2151,14 @@ function mdToLatex(md) {
   // 9. Escape what remains (plain paragraph text). Stashes (\x00N\x00) pass through.
   t = escapeLatexText(t);
 
-  // 10. Restore stashes
-  t = t.replace(/\x00(\d+)\x00/g, (_m, idx) => stashes[parseInt(idx, 10)]);
+  // 10. Restore stashes — loop until stable. Lists and blockquotes wrap items
+  //     that may already contain stash placeholders (bold, italic, code, math),
+  //     so a single pass leaves the inner placeholders unresolved.
+  let prev;
+  do {
+    prev = t;
+    t = t.replace(/\x00(\d+)\x00/g, (_m, idx) => stashes[parseInt(idx, 10)]);
+  } while (t !== prev);
 
   return t;
 }
