@@ -955,7 +955,101 @@ body {
 /* Sync save state */
 .save-dot.syncing { background: var(--accent); animation: pulse 1s infinite; }
 .save-dot.synced { background: #2d6a2d; }
+/* ===== PATENT FILES (curatorial gate) ===== */
+.patent-files {
+  margin: 0 0 2rem;
+  padding: 1rem 1.4rem 1.1rem;
+  background: var(--paper-shade);
+  border: 1px dashed var(--rule);
+  opacity: 0.55;
+  transition: opacity 0.3s ease;
+}
+.patent-files:hover { opacity: 0.78; }
+.patent-files.unlocked { opacity: 1; }
 
+.patent-files-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+.patent-files-title {
+  font-family: 'Cinzel', serif;
+  font-size: 0.74rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+.patent-files.unlocked .patent-files-title { color: var(--accent); }
+
+.patent-files-lock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+}
+.patent-files-sub {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-top: 0.3rem;
+}
+
+.patent-files-prompt {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.7rem;
+}
+.patent-files-input {
+  flex-grow: 1;
+  max-width: 220px;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  border-radius: 2px;
+}
+.patent-files-input:focus { outline: none; border-color: var(--accent); }
+
+.patent-files.shake { animation: pf-shake 0.24s ease-in-out; }
+@keyframes pf-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.patent-files-list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.patent-files-list li {
+  font-family: 'EB Garamond', serif;
+  font-size: 0.97rem;
+  line-height: 1.45;
+}
+.patent-files-list a {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+.patent-files-list a:hover { border-bottom-color: var(--accent-soft); }
+.patent-files-list .pf-meta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: 0.4em;
+  letter-spacing: 0.04em;
+}
 /* ===== HIDDEN ===== */
 .hidden { display: none !important; }
 
@@ -1210,7 +1304,7 @@ const TABS = [
         doi: '10.18178/jacn.2019.7.1.266',
         title: 'What is U-Mentalism? — JACN, 2019' },
     ] },
-  { id: 2, numeral: 'II',   title: 'Computer Architecture & Photonics',                subtitle: 'An advanced computational model',
+ { id: 2, numeral: 'II',   title: 'Computer Architecture & Photonics',                subtitle: 'An advanced computational model',
     defaultPdfs: [
       { url: 'https://www.u-mentalism.com/papers/2021-wo-u-mentalism-patent.pdf',
         doi: null,
@@ -1218,7 +1312,13 @@ const TABS = [
       { url: 'https://www.u-mentalism.com/papers/2021-ijwest-cinematic-supercomputation.pdf',
         doi: '10.5121/ijwest.2021.12101',
         title: 'Cinematic Supercomputation — IJWesT, 2021' },
-    ] },
+    ],
+    patentFiles: [
+      // Add entries here as the pre-prints become available, e.g.:
+      // { url: 'https://...', title: 'Pre-print I — title', year: 2023 },
+    ],
+    patentLockPassword: 'CHANGE_ME', // pick a memorable but private word; lives in plain text in the JS source by design
+  },
   { id: 3, numeral: 'III',  title: 'Universal Assembly Language',                      subtitle: 'Universal Assembly Programming Language',
     defaultRepo: 'https://github.com/U-Mentalism/U.-M.-Assembly-Programming-Language' },
   { id: 4, numeral: 'IV',   title: 'Blockchain Economy',                               subtitle: 'Trust, ledger, and the form of value' },
@@ -1354,6 +1454,12 @@ function renderTabContent() {
       </div>
     </section>
 
+    </section>
+
+    ${renderPatentFiles(t)}
+
+    <section class="section" id="reflectSection">
+
     <section class="section" id="reflectSection">
       <div class="section-head">
         <div class="section-title symbol">§</div>
@@ -1394,6 +1500,48 @@ function renderTabContent() {
   loadAndRenderReflection();
   loadAndRenderPdf();
   loadAndRenderRepo();
+}
+
+  function renderPatentFiles(tab) {
+  if (!Array.isArray(tab.patentFiles)) return '';
+
+  const unlockKey = 'patent-unlock:' + tab.id;
+  const isUnlocked = lsGet(unlockKey) === 'true';
+
+  if (!isUnlocked) {
+    return `
+      <section class="patent-files" id="patentFilesBlock">
+        <div class="patent-files-head" data-pf-toggle>
+          <span class="patent-files-title">§ Patent Files</span>
+          <span class="patent-files-lock">🔒 locked</span>
+        </div>
+        <div class="patent-files-sub">Tangential pre-prints — by appointment.</div>
+        <div class="patent-files-prompt hidden" id="patentFilesPrompt">
+          <input type="password" class="patent-files-input" id="patentFilesInput" placeholder="password" autocomplete="off">
+          <button class="btn btn-ghost" id="patentFilesSubmit" style="font-size:0.7rem;padding:0.4rem 0.75rem;">Unlock</button>
+        </div>
+      </section>
+    `;
+  }
+
+  const items = tab.patentFiles.length === 0
+    ? `<li style="color:var(--muted);font-style:italic;">No entries attached yet.</li>`
+    : tab.patentFiles.map(p => `
+        <li>
+          <a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.title || p.url)}</a>${p.year ? `<span class="pf-meta">· ${escapeHtml(String(p.year))}</span>` : ''}
+        </li>
+      `).join('');
+
+  return `
+    <section class="patent-files unlocked" id="patentFilesBlock">
+      <div class="patent-files-head" data-pf-relock title="Click to relock">
+        <span class="patent-files-title">§ Patent Files</span>
+        <span class="patent-files-lock">✓ open · click to relock</span>
+      </div>
+      <div class="patent-files-sub">Tangential pre-prints from a planned series for a journal of patent law.</div>
+      <ul class="patent-files-list">${items}</ul>
+    </section>
+  `;
 }
 
 function escapeHtml(s) {
@@ -1603,6 +1751,54 @@ function bindTabContent() {
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+  // Patent Files block (if present on this tab)
+  const pfBlock = document.getElementById('patentFilesBlock');
+  if (pfBlock) {
+    const headToggle = pfBlock.querySelector('[data-pf-toggle]');
+    const headRelock = pfBlock.querySelector('[data-pf-relock]');
+
+    if (headToggle) {
+      headToggle.addEventListener('click', () => {
+        const prompt = document.getElementById('patentFilesPrompt');
+        if (prompt) {
+          prompt.classList.remove('hidden');
+          const inp = document.getElementById('patentFilesInput');
+          if (inp) inp.focus();
+        }
+      });
+    }
+
+    if (headRelock) {
+      headRelock.addEventListener('click', () => {
+        flushPendingSave();
+        lsDel('patent-unlock:' + currentTab.id);
+        renderTabContent();
+      });
+    }
+
+    const submitBtn = document.getElementById('patentFilesSubmit');
+    const input = document.getElementById('patentFilesInput');
+    const tryUnlock = () => {
+      if (!input) return;
+      const expected = currentTab.patentLockPassword || '';
+      if (input.value === expected && expected !== '') {
+        flushPendingSave();
+        lsSet('patent-unlock:' + currentTab.id, 'true');
+        renderTabContent();
+      } else {
+        pfBlock.classList.add('shake');
+        setTimeout(() => pfBlock.classList.remove('shake'), 280);
+        input.value = '';
+        input.focus();
+      }
+    };
+    if (submitBtn) submitBtn.addEventListener('click', tryUnlock);
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') tryUnlock();
+      });
+    }
+  }
 }
 
 // ============================================================
