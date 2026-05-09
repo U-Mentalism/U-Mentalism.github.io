@@ -959,14 +959,14 @@ body {
 .patent-files {
   margin: 0 0 2rem;
   padding: 1rem 1.4rem 1.1rem;
-  background: var(--paper-shade);
-  border: 1px dashed var(--rule);
-  opacity: 0.55;
-  transition: opacity 0.3s ease;
+  background: rgba(184, 58, 58, 0.045);
+  border: 1px solid rgba(184, 58, 58, 0.22);
+  border-left: 3px solid var(--gold);
+  opacity: 0.78;
+  transition: opacity 0.3s ease, background 0.3s ease;
 }
-.patent-files:hover { opacity: 0.78; }
-.patent-files.unlocked { opacity: 1; }
-
+.patent-files:hover { opacity: 0.95; background: rgba(184, 58, 58, 0.07); }
+.patent-files.unlocked { opacity: 1; background: rgba(184, 58, 58, 0.06); }
 .patent-files-head {
   display: flex;
   align-items: baseline;
@@ -1314,9 +1314,10 @@ const TABS = [
         title: 'Cinematic Supercomputation — IJWesT, 2021' },
     ],
     patentFiles: [
-      // Add entries here as the pre-prints become available, e.g.:
-      // { url: 'https://...', title: 'Pre-print I — title', year: 2023 },
-    ],
+  { url: 'https://www.u-mentalism.com/papers/2025-hcommons-u-mentalism-patent-law-peril.pdf',
+    title: 'U-Mentalism Under the Radar of Patent Law Great Peril',
+    year: 2025 },
+],
     patentLockPassword: 'redpill', // pick a memorable but private word; lives in plain text in the JS source by design
   },
   { id: 3, numeral: 'III',  title: 'Universal Assembly Language',                      subtitle: 'Universal Assembly Programming Language',
