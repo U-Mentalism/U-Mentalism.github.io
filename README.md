@@ -1,69 +1,72 @@
-# U.M. — Research Notebook
+# U-Mentalism — Research Notebook
 
-A long-form research notebook for the U-Mentalism project.
+Operational manual for the notebook hosted at **[www.u-mentalism.com](https://www.u-mentalism.com)**.
 
-## About
+Maintained as an independent research project by Luís Homem, PhD ([ORCID 0000-0003-3520-1489](https://orcid.org/0000-0003-3520-1489)).
 
-U-Mentalism (U.M.) is a new computer architecture and supercomputation model that proposes to replace the binary code with the (isomorphic) RGB colour model — processing typical digital images "frames" and "films" at the pixel level, in cinematic fashion, via networks of Universal Turing-machines on the Internet. It is the subject of an international patent (WO2021/235960 A2; priority 20 May 2020) and has received gold medals at international invention exhibitions in Geneva (2023), Macao (2023), Istanbul (2025), Ankara (2025), and others.
+For the project's identification and scope, see the live site. This file documents how the notebook is built, configured, stored, and synced — material that previously lived in the in-site *About* panel and was moved here so the *About* could keep an institutional shape.
 
-This repository hosts an in-browser research notebook organised around eight thematic sections of the project. Each section pairs a primary document (PDF or DOI) at the top with an editable reflections space below — supporting Markdown, LaTeX (via KaTeX), and one-click export to Overleaf for full LaTeX compilation. Reflections are auto-committed to this repo via the GitHub API (single-author setup), making the repo both site and archive of the project's evolving thought.
+---
 
-## Notebook structure
+## How storage works
 
-|   | Title | Subtitle |
-|---|---|---|
-| I | *Philosophia Naturalis / Philosophia Artificialis* | On nature and the artificial |
-| II | Computer Architecture & Photonics | An advanced computational model |
-| III | Universal Assembly Language | Universal Assembly Programming Language |
-| IV | Blockchain Economy | Trust, ledger, and the form of value |
-| V | Cities & Energy | Integrating solar energy, photonics, and computation |
-| VI | Ethics & Neuroscience | The mind, the brain, and moral inquiry |
-| VII | *Enlightenment / Cybernetica* | Cultural studies between the classical and the cybernetic |
-| · | *Indice / Codex* | Addendum — frame, film, code |
+Reflections live in your browser's `localStorage`. PDF URLs are also stored there. Nothing is sent anywhere — everything stays on your device. To move data between machines, use **Export** / **Import**.
 
-The three Latin / hybrid pairs (I, VII, ·) form a deliberate progression: from the ontology of nature versus artifice, through the historical comparison of classical and cybernetic Enlightenments, to the semiotics of the indexical sign (the image as causal trace of light, after Peirce) and the discrete codex (the encoded text).
+## PDFs & Repository at the top of each tab
 
-## Related repositories
+Each tab can display one or more PDFs (configured by DOI or URL) and link to a GitHub repository or directory. The author hosts each document (**Common Ground**, own server, arXiv, Drive direct-link, etc.) and pastes its DOI via *Set source*. The site accepts:
 
-- [`U-Mentalism/U.-M.-Assembly-Programming-Language`](https://github.com/U-Mentalism/U.-M.-Assembly-Programming-Language) — the Universal Assembly Programming Language. Linked from Tab III.
+- A bare DOI: `10.XXXX/XXXXX`
+- A resolved DOI URL: `https://doi.org/10.XXXX/XXXXX`
+- Any direct PDF URL
+- An optional GitHub URL pointing to a repository, file, or directory (shows as **↗ Code**)
 
-## How the notebook works
+When two or more documents are attached to the same tab, a *chip strip* appears above the viewer; click a chip to switch the active document, or click the `×` on a chip to remove it. Visitors read the active document inline and use **↓ Download** to retrieve a copy. When a DOI is given, it is shown in the status line and resolves via `doi.org`.
 
-The site is a single HTML file. By default, reflections are stored in the browser's `localStorage`. Optional GitHub sync (configurable via the **⚙ Sync** button in the sidebar) commits each reflection to `reflections/NN.md` in this repo on every save, using a fine-grained Personal Access Token. See the **About** modal in the sidebar for full details.
+## GitHub
 
-The repository structure:
+The site footer links to [github.com/U-Mentalism](https://github.com/U-Mentalism). Per-tab repository links can point to any path within any repo there (e.g. `/U-Mentalism/assembly`, `/U-Mentalism/blockchain`, etc.). The notebook itself is hosted as a static file inside [U-Mentalism/U-Mentalism.github.io](https://github.com/U-Mentalism/U-Mentalism.github.io) via GitHub Pages.
+
+## GitHub Sync (optional)
+
+Reflections can be committed automatically to a chosen repo via the **⚙ Sync** button in the sidebar. Single-author setup using a [fine-grained Personal Access Token](https://github.com/settings/personal-access-tokens) scoped to a single repo, with *Contents: Read and write* only. Each tab is stored as `reflections/NN.md`; auto-push commits after every Save, or push/pull manually. The notebook works offline either way; sync just keeps a Git-versioned mirror.
+
+The token is kept in the browser's `localStorage`. Revoke it from GitHub at any time. Single-user use only.
+
+### Repository layout
+
+The notebook expects (and will create) this structure on first push:
 
 ```
-.
-├── index.html              # the notebook
+{repo}/
 ├── reflections/
-│   ├── 01.md               # Tab I  — Philosophia Naturalis / Artificialis
-│   ├── 02.md               # Tab II  — Computer Architecture & Photonics
-│   ├── 03.md               # Tab III — Universal Assembly Language
-│   ├── 04.md               # Tab IV  — Blockchain Economy
-│   ├── 05.md               # Tab V   — Cities & Energy
-│   ├── 06.md               # Tab VI  — Ethics & Neuroscience
-│   ├── 07.md               # Tab VII — Enlightenment / Cybernetica
-│   └── 08.md               # Tab · (Addendum) — Indice / Codex
-├── assets/
-│   └── logo.png            # U.M. logo (transparent, 1262×1805)
-├── 404.html                # error page
-├── README.md
-└── LICENSE
+│   ├── 01.md   ← Philosophia Naturalis / Artificialis
+│   ├── 02.md   ← Computer Architecture & Photonics
+│   ├── 03.md   ← Universal Assembly Language
+│   ├── 04.md   ← Blockchain Economy
+│   ├── 05.md   ← Cities & Energy
+│   ├── 06.md   ← Ethics & Neuroscience
+│   ├── 07.md   ← Enlightenment / Cybernetica
+│   └── 08.md   ← Indice / Codex
+└── (anything else you keep in the repo: site, docs, code, etc.)
 ```
 
-## Patent and key publications
+## Markdown & LaTeX
 
-- Luís Homem, "U-Mentalism Patent: the beginning of cinematic supercomputation", *International Journal of Web & Semantic Technology* 12 (2021), pp. 1–18.
-- Luís Homem, "What is U-Mentalism?", *Journal of Advances in Computer Networks* 7 (2019), pp. 18–24.
-- International Patent Application: **WO2021/235960 A2** (priority 20 May 2020). National applications in Europe (EP21730302.3), USA (US17/997,391), Canada (CA3181799), India (IN202247061191), and Japan (JP2022-571258).
+Use standard Markdown for structure. Use `$...$` for inline math and `$$...$$` for display math. The in-browser engine is **KaTeX** — fast, but math-only (no `\usepackage`, no TikZ, no full LaTeX). Examples:
 
-## License
+- `$E = mc^2$` renders inline
+- `$$\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}$$` renders centered
 
-This work is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/) (CC BY-NC-SA 4.0). See `LICENSE` for full terms.
+## Full LaTeX via Overleaf
 
-## Acknowledgements
+For real LaTeX with packages (TikZ, biblatex, etc.), each tab has an **↗ Overleaf** button. It converts the section to a complete `.tex` document with a standard preamble (amsmath, amssymb, mathtools, graphicx, hyperref, geometry, microtype, enumitem) and posts it to Overleaf, opening a new project pre-filled. From there, add any `\usepackage{...}` you need.
 
-Inventor: **Luís Homem**.
+*Markdown→LaTeX conversion is approximate; review plain-text paragraphs for stray characters and clean up in Overleaf as needed.*
 
-Acknowledgements to IT Consultant Bruno Costa, and Science Managers Diogo Anjos and Flávio Azevedo, for their work, help and support.
+## Recommended workflow
+
+- Publish papers on **Common Ground** (or arXiv, Zenodo, etc.) and copy the DOI.
+- Paste the DOI(s) per tab via *Set source* — multiple documents can be added to the same tab.
+- Write reflections, paste AI critiques, develop ideas in the editor below.
+- Export periodically as a JSON backup.
