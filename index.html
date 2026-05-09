@@ -1552,6 +1552,7 @@ async function loadAndRenderReflection() {
     const ed = document.getElementById('reflectEditor');
     ed.value = content;
     ed.addEventListener('input', onEditorInput);
+    ed.addEventListener('blur', pushIfDirty);
     ed.focus();
     if (content.length === 0) {
       ed.placeholder = `Write reflections, paste AI critiques, develop ideas.
@@ -1616,10 +1617,11 @@ function commitSave() {
         metaSpan.textContent = `Last edited ${d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })} ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
       }
     }
-    // If sync is enabled, push in the background
-    if (typeof maybeAutoPush === 'function') {
-      maybeAutoPush(savedTabId);
-    }
+    // Note: auto-push is no longer triggered here. Push is deferred to natural
+    // session boundaries (editor blur, tab visibility change) via pushIfDirty(),
+    // so a single writing session yields one commit per pause instead of per
+    // keystroke. The local save above is unchanged — data is always durable
+    // in localStorage and recoverable via Export or via the next push.
   } else {
     setSaveState('error');
     toast('Storage failed — quota may be full', 'error');
@@ -2552,6 +2554,19 @@ async function maybeAutoPush(tabId) {
   }
 }
 
+// Push the current tab's reflection at natural session boundaries:
+// when the editor loses focus (blur) and when the tab becomes hidden
+// (visibilitychange to hidden — covers tab switch, minimize, and most
+// close scenarios). Replaces the per-keystroke auto-push that previously
+// fired inside commitSave, so the GitHub log accumulates one commit per
+// writing burst instead of one per debounced keystroke.
+function pushIfDirty() {
+  flushPendingSave();
+  if (currentTab && typeof maybeAutoPush === 'function') {
+    maybeAutoPush(currentTab.id);
+  }
+}
+
 
 document.getElementById('aboutBtn').addEventListener('click', () => {
   aboutModal.classList.add('open');
@@ -2574,6 +2589,12 @@ document.getElementById('importBtn').addEventListener('click', importAll);
 // Save on page hide
 window.addEventListener('beforeunload', flushPendingSave);
 window.addEventListener('pagehide', flushPendingSave);
+// Push on tab visibility change to hidden — covers tab switch, minimization,
+// and most close scenarios. Catches the gap left when the editor is closed
+// fast enough that blur does not fire.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') pushIfDirty();
+});
 
 renderTabList();
 const lastTab = Number(lsGet('lastTab')) || 1;

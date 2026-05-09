@@ -29,7 +29,7 @@ The site footer links to [github.com/U-Mentalism](https://github.com/U-Mentalism
 
 ## GitHub Sync (optional)
 
-Reflections can be committed automatically to a chosen repo via the **⚙ Sync** button in the sidebar. Single-author setup using a [fine-grained Personal Access Token](https://github.com/settings/personal-access-tokens) scoped to a single repo, with *Contents: Read and write* only. Each tab is stored as `reflections/NN.md`; auto-push commits after every Save, or push/pull manually. The notebook works offline either way; sync just keeps a Git-versioned mirror.
+Reflections can be committed automatically to a chosen repo via the **⚙ Sync** button in the sidebar. Single-author setup using a [fine-grained Personal Access Token](https://github.com/settings/personal-access-tokens) scoped to a single repo, with *Contents: Read and write* only. Each tab is stored as `reflections/NN.md`; auto-push commits when the editor loses focus or the browser tab becomes hidden — one commit per writing burst, not per keystroke. Manual *Push all* / *Pull all* are available in the Sync modal at any time. The notebook works offline either way; sync just keeps a Git-versioned mirror.
 
 The token is kept in the browser's `localStorage`. Revoke it from GitHub at any time. Single-user use only.
 
