@@ -1178,52 +1178,16 @@ body {
 <div class="modal-overlay" id="aboutModal">
   <div class="modal">
     <div class="modal-head">
-      <h2>About this notebook</h2>
+      <h2>About</h2>
       <button class="modal-close" data-close-modal>×</button>
     </div>
     <div class="modal-body">
-      <p>This is a personal research notebook structured around the U-Mentalism project — a long-form, multi-disciplinary inquiry. Each tab hosts one or more working documents (PDFs) at the top and a permanent, editable reflection space below, supporting Markdown and LaTeX.</p>
-
-      <h3>Intent</h3>
-      <p>The principal aim is to gather <em>sound critique</em> from AI systems and human readers alike, and to allow the project to evolve through that confrontation rather than around it.</p>
-
-      <h3>How storage works</h3>
-      <p>Reflections live in your browser's <code>localStorage</code>. PDF URLs are also stored there. Nothing is sent anywhere — everything stays on your device. To move data between machines, use <strong>Export</strong> / <strong>Import</strong>.</p>
-
-      <h3>PDFs &amp; Repository at the top of each tab</h3>
-      <p>Each tab can display one or more PDFs (configured by DOI or URL) and link to a GitHub repository or directory. The author hosts each document (<strong>Common Ground</strong>, own server, arXiv, Drive direct-link, etc.) and pastes its DOI via <em>Set source</em>. The site accepts:</p>
-      <ul>
-        <li>A bare DOI: <code>10.XXXX/XXXXX</code></li>
-        <li>A resolved DOI URL: <code>https://doi.org/10.XXXX/XXXXX</code></li>
-        <li>Any direct PDF URL</li>
-        <li>An optional GitHub URL pointing to a repository, file, or directory (shows as <strong>↗ Code</strong>)</li>
-      </ul>
-      <p>When two or more documents are attached to the same tab, a <em>chip strip</em> appears above the viewer; click a chip to switch the active document, or click the <code>×</code> on a chip to remove it. Visitors read the active document inline and use <strong>↓ Download</strong> to retrieve a copy. When a DOI is given, it is shown in the status line and resolves via <code>doi.org</code>.</p>
-
-      <h3>GitHub</h3>
-      <p>The site footer links to <a href="https://github.com/U-Mentalism" target="_blank" rel="noopener">github.com/U-Mentalism</a>. Per-tab repository links can point to any path within any repo there (e.g. <code>/U-Mentalism/assembly</code>, <code>/U-Mentalism/blockchain</code>, etc.). The notebook itself can be hosted as a static file inside one of these repos via GitHub Pages.</p>
-
-      <h3>GitHub Sync (optional)</h3>
-      <p>Reflections can be committed automatically to a chosen repo via the <strong>⚙ Sync</strong> button in the sidebar. Single-author setup using a fine-grained Personal Access Token. Each tab is stored as <code>reflections/NN.md</code>; auto-push commits after every Save, or push/pull manually. The notebook works offline either way; sync just keeps a Git-versioned mirror.</p>
-
-      <h3>Markdown &amp; LaTeX</h3>
-      <p>Use standard Markdown for structure. Use <code>$...$</code> for inline math and <code>$$...$$</code> for display math. The in-browser engine is <strong>KaTeX</strong> — fast, but math-only (no <code>\usepackage</code>, no TikZ, no full LaTeX). Examples:</p>
-      <ul>
-        <li><code>$E = mc^2$</code> renders as $E = mc^2$</li>
-        <li><code>$$\int_0^\infty e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2}$$</code> renders centered</li>
-      </ul>
-
-      <h3>Full LaTeX via Overleaf</h3>
-      <p>For real LaTeX with packages (TikZ, biblatex, etc.), each tab has an <strong>↗ Overleaf</strong> button. It converts the section to a complete <code>.tex</code> document with a standard preamble (amsmath, amssymb, mathtools, graphicx, hyperref, geometry, microtype, enumitem) and posts it to Overleaf, opening a new project pre-filled. From there, add any <code>\usepackage{...}</code> you need.</p>
-      <p style="font-style:italic;color:var(--muted);font-size:0.95em;">Markdown→LaTeX conversion is approximate; review plain-text paragraphs for stray characters and clean up in Overleaf as needed.</p>
-
-      <h3>Recommended workflow</h3>
-      <ul>
-        <li>Publish papers on <strong>Common Ground</strong> (or arXiv, Zenodo, etc.) and copy the DOI.</li>
-        <li>Paste the DOI(s) per tab via <em>Set source</em> — multiple documents can be added to the same tab.</li>
-        <li>Write reflections, paste AI critiques, develop ideas in the editor below.</li>
-        <li>Export periodically as a JSON backup.</li>
-      </ul>
+      <p style="font-family:'Cinzel',serif;font-size:1.35rem;letter-spacing:0.04em;margin:0.2em 0 0.8em;">U-Mentalism</p>
+      <p>A long-form, multi-disciplinary research notebook, organised across eight tabulae. Maintained as an independent research project.</p>
+      <p style="margin-top:1.8em;font-size:0.92em;color:var(--muted);line-height:1.75;">
+        Luís Homem, PhD &middot; ORCID <a href="https://orcid.org/0000-0003-3520-1489" target="_blank" rel="noopener">0000-0003-3520-1489</a><br>
+        <a href="https://github.com/U-Mentalism" target="_blank" rel="noopener">github.com/U-Mentalism</a> &middot; <a href="https://www.u-mentalism.com" target="_blank" rel="noopener">www.u-mentalism.com</a>
+      </p>
     </div>
   </div>
 </div>
@@ -1285,6 +1249,11 @@ body {
 │   ├── 07.md   ← Enlightenment / Cybernetica
 │   └── 08.md   ← Indice / Codex
 └── (anything else you keep in the repo: site, docs, code, etc.)</pre>
+
+      <p style="margin-top:1.6em;font-size:0.85em;color:var(--muted);text-align:center;">
+        Markdown / LaTeX syntax, Overleaf export, recommended workflow &middot;
+        <a href="https://github.com/U-Mentalism/U-Mentalism.github.io#readme" target="_blank" rel="noopener">📖 README</a>
+      </p>
     </div>
   </div>
 </div>
