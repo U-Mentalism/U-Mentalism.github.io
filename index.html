@@ -258,6 +258,40 @@ body {
   line-height: 1.5;
 }
 
+/* PAT expiry warning — appears in sidebar when token nears or passes expiry.
+   Hidden by default; .warn (≤14d), .danger (≤3d), .expired (past). */
+.pat-expiry-warn {
+  display: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.85rem;
+  border-radius: 2px;
+  border: 1px solid;
+  line-height: 1.45;
+}
+.pat-expiry-warn.warn {
+  display: block;
+  color: #8a6d1a;
+  background: rgba(184, 154, 26, 0.07);
+  border-color: rgba(184, 154, 26, 0.35);
+}
+.pat-expiry-warn.danger {
+  display: block;
+  color: var(--gold);
+  background: rgba(184, 58, 58, 0.06);
+  border-color: rgba(184, 58, 58, 0.35);
+}
+.pat-expiry-warn.expired {
+  display: block;
+  color: var(--gold-deep);
+  background: rgba(142, 40, 40, 0.08);
+  border-color: var(--gold-deep);
+  font-weight: 600;
+}
+
 /* ===== MAIN CONTENT ===== */
 .content {
   padding: 3rem 4rem 5rem;
@@ -870,7 +904,8 @@ body {
 }
 
 .form-row input[type="text"],
-.form-row input[type="password"] {
+.form-row input[type="password"],
+.form-row input[type="date"] {
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--rule);
   background: var(--paper);
@@ -1161,11 +1196,12 @@ body {
         <button class="icon-btn" id="syncBtn" title="GitHub sync settings">⚙ Sync</button>
         <button class="icon-btn" id="aboutBtn" title="About this site">About</button>
       </div>
+      <div class="pat-expiry-warn" id="patExpiryWarn"></div>
       <a class="sidebar-github" href="https://github.com/U-Mentalism" target="_blank" rel="noopener">
         ↗ github.com/U-Mentalism
       </a>
       <div class="sidebar-meta">
-        Long-form inquiry, intended to receive sound critique and evolve over time. Reflections autosaved locally in this browser.
+        An independent, long-form research project. A working notebook, revised in place.
       </div>
     </div>
   </aside>
@@ -1210,6 +1246,10 @@ body {
       <div class="form-row">
         <label>Personal Access Token</label>
         <input type="password" id="ghToken" placeholder="github_pat_...   or   ghp_...">
+      </div>
+      <div class="form-row">
+        <label>PAT expiry date</label>
+        <input type="date" id="ghTokenExpiry">
       </div>
       <div class="form-row">
         <label>Repository</label>
@@ -2318,6 +2358,7 @@ function setGhSettings(s) {
 
 function clearGhSettings() {
   lsDel(GH_KEY);
+  lsDel('pat-expiry');
   // Clear stored SHAs
   TABS.forEach(t => lsDel('gh-sha:' + t.id));
 }
@@ -2437,6 +2478,7 @@ function clearGhStatus() {
 function loadSettingsIntoForm() {
   const s = getGhSettings() || {};
   document.getElementById('ghToken').value = s.token || '';
+  document.getElementById('ghTokenExpiry').value = lsGet('pat-expiry') || '';
   document.getElementById('ghRepo').value = s.owner && s.repo ? `${s.owner}/${s.repo}` : '';
   document.getElementById('ghBranch').value = s.branch || 'main';
   document.getElementById('ghAutoSync').checked = !!s.autoSync;
@@ -2467,6 +2509,12 @@ syncModal.addEventListener('click', (e) => {
 });
 
 document.getElementById('ghSaveBtn').addEventListener('click', () => {
+  // Persist PAT expiry independently of the rest — saved even if the form's
+  // token/repo validation fails, so partial data isn't lost.
+  const expiryVal = document.getElementById('ghTokenExpiry').value;
+  if (expiryVal) lsSet('pat-expiry', expiryVal); else lsDel('pat-expiry');
+  renderPatExpiryWarn();
+
   const form = readForm();
   if (!form) { setGhStatus('Token and repository are required.', 'err'); return; }
   if (form.error) { setGhStatus(form.error, 'err'); return; }
@@ -2535,6 +2583,7 @@ document.getElementById('ghClearBtn').addEventListener('click', () => {
   if (!confirm('Forget GitHub sync settings (token + repo + cached file SHAs) from this browser? This does not revoke the token on GitHub.')) return;
   clearGhSettings();
   loadSettingsIntoForm();
+  renderPatExpiryWarn();
   setGhStatus('Sync settings cleared from this browser.', 'ok');
   toast('Sync settings cleared');
 });
@@ -2581,6 +2630,51 @@ aboutModal.addEventListener('click', (e) => {
 });
 
 // ============================================================
+// PAT EXPIRY WARNING — sidebar indicator that escalates as the
+// token's stored expiry date approaches and passes.
+// Thresholds: nothing >14d, yellow ≤14d, red ≤3d, error past expiry.
+// The expiry is set by the operator in the Sync modal; nothing
+// happens here unless they've entered one.
+// ============================================================
+function renderPatExpiryWarn() {
+  const el = document.getElementById('patExpiryWarn');
+  if (!el) return;
+  const expiry = lsGet('pat-expiry');
+  if (!expiry) {
+    el.className = 'pat-expiry-warn';
+    el.textContent = '';
+    return;
+  }
+  // Parse YYYY-MM-DD as local-noon to avoid DST/timezone-edge glitches
+  const parts = expiry.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) {
+    el.className = 'pat-expiry-warn';
+    el.textContent = '';
+    return;
+  }
+  const [y, m, d] = parts;
+  const expiryDate = new Date(y, m - 1, d, 12, 0, 0);
+  const now = new Date();
+  const days = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+  if (days < 0) {
+    el.className = 'pat-expiry-warn expired';
+    el.textContent = 'PAT expired — auto-push will fail';
+  } else if (days === 0) {
+    el.className = 'pat-expiry-warn danger';
+    el.textContent = 'PAT expires today — renew now';
+  } else if (days <= 3) {
+    el.className = 'pat-expiry-warn danger';
+    el.textContent = `PAT expires in ${days} day${days === 1 ? '' : 's'} — renew now`;
+  } else if (days <= 14) {
+    el.className = 'pat-expiry-warn warn';
+    el.textContent = `PAT expires in ${days} day${days === 1 ? '' : 's'}`;
+  } else {
+    el.className = 'pat-expiry-warn';
+    el.textContent = '';
+  }
+}
+
+// ============================================================
 // INIT
 // ============================================================
 document.getElementById('exportBtn').addEventListener('click', exportAll);
@@ -2599,6 +2693,7 @@ document.addEventListener('visibilitychange', () => {
 renderTabList();
 const lastTab = Number(lsGet('lastTab')) || 1;
 selectTab(lastTab);
+renderPatExpiryWarn();
 
 // Configure marked
 if (window.marked) {
