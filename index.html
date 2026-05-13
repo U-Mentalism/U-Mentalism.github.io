@@ -777,6 +777,33 @@ body {
 .reflect-rendered .katex { font-size: 1.05em; }
 .reflect-rendered .katex-display { margin: 1.5em 0; }
 
+/* Dateline — auto-inserted at the start of each new Reflection entry.
+   Renders as a small italic line with a subtle separator above, evoking
+   a classical journalistic/epistolary dateline ("Lisbon, 13 May 2026").
+   The strong text holds the human-readable date; the rest of the line
+   carries the Unix epoch for machine-readability. */
+.reflect-rendered p.reflect-dateline {
+  margin: 2.5em 0 1em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--rule);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.92em;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+.reflect-rendered p.reflect-dateline strong {
+  font-weight: 600;
+  font-style: normal;
+  color: var(--ink-soft);
+  letter-spacing: 0.02em;
+}
+.reflect-rendered p.reflect-dateline:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+
 .reflect-status {
   display: flex;
   justify-content: space-between;
@@ -1361,6 +1388,67 @@ function lsDel(key) {
 }
 
 // ============================================================
+// GITHUB PUBLIC RAW BASE — used for cross-browser-consistent
+// Reflection reads when localStorage is empty. Read-only, no PAT
+// required. The repo is public, so any visitor (or any author
+// browser without a prior Pull) sees the canonical content from
+// the GitHub default branch instead of an empty placeholder.
+// ============================================================
+const RAW_BASE = 'https://raw.githubusercontent.com/U-Mentalism/U-Mentalism.github.io/main';
+
+async function fetchReflectionFromGitHubRaw(tabId) {
+  const url = `${RAW_BASE}/reflections/${String(tabId).padStart(2, '0')}.md`;
+  try {
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (!r.ok) return null;
+    return await r.text();
+  } catch (e) {
+    console.warn('Could not fetch reflection from GitHub raw', tabId, e);
+    return null;
+  }
+}
+
+// ============================================================
+// DATELINE — provenance marker auto-inserted at the start of each
+// new Reflection entry. Format: "**Lisbon, 13 May 2026** · Unix: <epoch>".
+// The human-readable date is in Europe/Lisbon time (the author's
+// home time zone); the Unix epoch is UTC by definition and serves
+// as the unambiguous machine-readable timestamp. Datelines live in
+// the markdown source itself — they are versioned by Git like any
+// other content, and are consistent across browsers because the
+// source is.
+// ============================================================
+function formatDateline(timestampMs) {
+  const d = new Date(timestampMs);
+  // "13 May 2026" — short English, Europe/Lisbon time zone.
+  const dateStr = d.toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    timeZone: 'Europe/Lisbon',
+  });
+  const unix = Math.floor(timestampMs / 1000);
+  return `**Lisbon, ${dateStr}** · Unix: ${unix}`;
+}
+
+function startsWithDateline(text) {
+  return /^\*\*Lisbon,\s/.test(text);
+}
+
+// Style datelines after marked.parse: walk the rendered DOM and add
+// a class to <p> elements whose first child is a <strong> starting
+// with "Lisbon,". Drives the .reflect-dateline CSS.
+function styleDatelines(rendered) {
+  if (!rendered) return;
+  rendered.querySelectorAll('p').forEach(p => {
+    const first = p.firstChild;
+    if (first && first.nodeType === Node.ELEMENT_NODE &&
+        first.tagName === 'STRONG' &&
+        /^Lisbon,\s/.test(first.textContent || '')) {
+      p.classList.add('reflect-dateline');
+    }
+  });
+}
+
+// ============================================================
 // TOAST
 // ============================================================
 const toastEl = document.getElementById('toast');
@@ -1561,15 +1649,39 @@ let editing = false;
 let saveTimer = null;
 let pendingContent = null;
 let pendingTabId = null;
+// Snapshot of editor content at the moment the textarea opens. Used by
+// maybeInjectDateline to detect new entries (pure appends since open)
+// and inject a dateline before push.
+let editorOpenContent = '';
 
 function reflectionKey(tabId) { return 'reflect:' + tabId; }
 function reflectionMetaKey(tabId) { return 'reflect-meta:' + tabId; }
 
 async function loadAndRenderReflection() {
   const tabId = currentTab.id;
-  const content = lsGet(reflectionKey(tabId)) || '';
+  let content = lsGet(reflectionKey(tabId)) || '';
   const metaRaw = lsGet(reflectionMetaKey(tabId));
-  const meta = metaRaw ? JSON.parse(metaRaw) : null;
+  let meta = metaRaw ? JSON.parse(metaRaw) : null;
+
+  // Cross-browser consistency: if localStorage is empty for this tab,
+  // fetch the canonical content from the GitHub default branch. No PAT
+  // required (public repo, raw.githubusercontent.com). This is what
+  // makes Chrome/Edge/etc. show the same Reflections that have been
+  // edited in another browser, without requiring a manual Pull.
+  // Policy: localStorage-wins when present (does not overwrite local
+  // unpushed edits). If GitHub is newer than a non-empty localStorage,
+  // the author must Pull manually — that case is conservative on
+  // purpose to avoid clobbering local work.
+  if (content.trim().length === 0) {
+    const remote = await fetchReflectionFromGitHubRaw(tabId);
+    if (remote && remote.trim().length > 0) {
+      lsSet(reflectionKey(tabId), remote);
+      const newMeta = { updated: Date.now(), source: 'github-raw' };
+      lsSet(reflectionMetaKey(tabId), JSON.stringify(newMeta));
+      content = remote;
+      meta = newMeta;
+    }
+  }
 
   const area = document.getElementById('reflectArea');
   const toolbar = document.getElementById('reflectToolbar');
@@ -1591,6 +1703,10 @@ async function loadAndRenderReflection() {
     area.innerHTML = `<textarea class="reflect-editor" id="reflectEditor" placeholder="Write reflections, paste AI critiques, develop ideas. Markdown and LaTeX (\\$...\\$ inline, \\$\\$...\\$\\$ block) are supported."></textarea>`;
     const ed = document.getElementById('reflectEditor');
     ed.value = content;
+    // Capture the snapshot for dateline injection. Any append that
+    // appears between this snapshot and the next push counts as a
+    // new entry candidate.
+    editorOpenContent = content;
     ed.addEventListener('input', onEditorInput);
     ed.addEventListener('blur', pushIfDirty);
     ed.focus();
@@ -1613,6 +1729,7 @@ Use the toolbar above to insert common patterns, including a divider for AI crit
       area.innerHTML = `<div class="reflect-rendered" id="reflectRendered"></div>`;
       const rendered = document.getElementById('reflectRendered');
       rendered.innerHTML = marked.parse(content);
+      styleDatelines(rendered);
       tryRenderMath(rendered);
     }
   }
@@ -2609,8 +2726,74 @@ async function maybeAutoPush(tabId) {
 // close scenarios). Replaces the per-keystroke auto-push that previously
 // fired inside commitSave, so the GitHub log accumulates one commit per
 // writing burst instead of one per debounced keystroke.
+//
+// Before flushing/pushing, we run maybeInjectDateline: if the editor
+// content has grown by a pure append since the editor opened, and the
+// appended block does not already start with a dateline marker, a
+// "**Lisbon, <date>** · Unix: <epoch>" line is inserted in the source
+// at the boundary. This makes every new entry self-dating in the
+// markdown itself, which then versions through Git like any other
+// content and renders consistently across browsers.
+function maybeInjectDateline() {
+  const ed = document.getElementById('reflectEditor');
+  if (!ed) return false;
+
+  const current = ed.value;
+  const snapshot = editorOpenContent;
+
+  // No growth → not a new entry; just refresh snapshot and bail.
+  if (current.length <= snapshot.length) {
+    editorOpenContent = current;
+    return false;
+  }
+  // Not a pure append (content was edited in the middle) → treat as
+  // edit, not new entry. Author can add dateline manually if needed.
+  if (!current.startsWith(snapshot)) {
+    editorOpenContent = current;
+    return false;
+  }
+
+  const appended = current.substring(snapshot.length);
+  const appendedTrimmed = appended.replace(/^\s+/, '');
+
+  // Pure whitespace append → no entry to mark.
+  if (appendedTrimmed.length === 0) {
+    editorOpenContent = current;
+    return false;
+  }
+  // Author already wrote their own dateline → respect it.
+  if (startsWithDateline(appendedTrimmed)) {
+    editorOpenContent = current;
+    return false;
+  }
+
+  // Compose: snapshot + appropriate separator + dateline + blank line + appended block.
+  const dateline = formatDateline(Date.now());
+  let separator;
+  if (snapshot.length === 0)         separator = '';
+  else if (snapshot.endsWith('\n\n')) separator = '';
+  else if (snapshot.endsWith('\n'))   separator = '\n';
+  else                                 separator = '\n\n';
+
+  const newContent = snapshot + separator + dateline + '\n\n' + appendedTrimmed;
+
+  ed.value = newContent;
+  pendingContent = newContent;
+  pendingTabId = currentTab.id;
+  editorOpenContent = newContent;
+  return true;
+}
+
 function pushIfDirty() {
-  flushPendingSave();
+  const injected = maybeInjectDateline();
+  if (injected) {
+    // Injection produced fresh pendingContent that supersedes any
+    // debounced save in flight; clear the timer and commit directly.
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    commitSave();
+  } else {
+    flushPendingSave();
+  }
   if (currentTab && typeof maybeAutoPush === 'function') {
     maybeAutoPush(currentTab.id);
   }
