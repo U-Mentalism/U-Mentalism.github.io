@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "tabs": {
+    "1": {
+      "list": [
+        {
+          "id": 1,
+          "url": "https://www.u-mentalism.com/papers/2019-jacn-what-is-u-mentalism.pdf",
+          "doi": "10.18178/jacn.2019.7.1.266",
+          "title": "What is U-Mentalism? — JACN, 2019",
+          "added": 0
+        },
+        {
+          "id": 3,
+          "url": "https://u-mentalism.com/papers/On_Computable_Images_and_Films_v36.pdf",
+          "doi": null,
+          "title": null,
+          "added": 1779233369832
+        }
+      ],
+      "active": "3",
+      "added": "2026-06-08T10:29:07+01:00",
+      "epoch": 1780910947
+    }
+  }
+}
