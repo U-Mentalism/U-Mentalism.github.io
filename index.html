@@ -1409,6 +1409,183 @@ async function fetchReflectionFromGitHubRaw(tabId) {
 }
 
 // ============================================================
+// SOLUTION C — repo-persisted document config + public fetch.
+//
+// Mirrors the Reflections public-render pattern for Documents.
+// The canonical source of truth is data/documents.json in the repo.
+// Each tab's per-tab document LIST (the actual schema: pdf-list:<id>
+// + pdf-active:<id>) is serialized into it, with explicit dateline-style
+// provenance (added ISO + epoch). Visitors on fresh browsers read it
+// publicly (no PAT); the author's edits auto-push it (PAT) on the same
+// blur/visibilitychange boundaries as Reflections.
+//
+// NOTE: the storage model is a per-tab list, not the single-doc model
+// the original spec sketched. documents.json reflects the real schema.
+// ============================================================
+const DOCUMENTS_JSON_PATH = 'data/documents.json';
+const DOCS_STATE_KEY = 'documentsState';      // lsKey: presence => localStorage-wins
+const DOCS_DIRTY_KEY = 'documentsDirty';      // lsKey: '1' when local config needs pushing
+const DOCS_SHA_KEY   = 'gh-sha:documents';    // cached blob SHA for conflict-free PUT
+
+function docsMarkDirty() { lsSet(DOCS_DIRTY_KEY, '1'); }
+function docsClearDirty() { lsDel(DOCS_DIRTY_KEY); }
+function docsIsDirty() { return lsGet(DOCS_DIRTY_KEY) === '1'; }
+
+// Build the canonical object from current per-tab localStorage lists.
+// Only tabs that actually have a stored list (i.e. author-configured,
+// not pure TABS defaults) are emitted, so the repo file records overrides
+// rather than re-encoding the hardcoded defaults.
+function serializeDocuments() {
+  const now = Date.now();
+  const tabs = {};
+  TABS.forEach(t => {
+    const raw = lsGet(pdfListKey(t.id));
+    if (!raw) return; // no author-set list for this tab
+    let list;
+    try { list = JSON.parse(raw); } catch { return; }
+    if (!Array.isArray(list) || list.length === 0) return;
+    const active = lsGet(pdfActiveKey(t.id)) || String(list[0].id);
+    tabs[String(t.id)] = {
+      list,
+      active,
+      added: formatISOLisbon(now),
+      epoch: Math.floor(now / 1000),
+    };
+  });
+  return { version: 1, tabs };
+}
+
+// ISO 8601 local-aware (Europe/Lisbon), consistent with dateline policy.
+function formatISOLisbon(ms) {
+  const d = new Date(ms);
+  try {
+    const parts = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Lisbon',
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    }).formatToParts(d).reduce((a, p) => (a[p.type] = p.value, a), {});
+    // Determine offset for Europe/Lisbon at this instant (+00:00 or +01:00).
+    const offMin = lisbonOffsetMinutes(d);
+    const sign = offMin >= 0 ? '+' : '-';
+    const abs = Math.abs(offMin);
+    const oh = String(Math.floor(abs / 60)).padStart(2, '0');
+    const om = String(abs % 60).padStart(2, '0');
+    return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}${sign}${oh}:${om}`;
+  } catch {
+    return d.toISOString();
+  }
+}
+function lisbonOffsetMinutes(date) {
+  // Offset = local Lisbon wall time minus UTC wall time, in minutes.
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Lisbon', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = fmt.formatToParts(date).reduce((a, x) => (a[x.type] = x.value, a), {});
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return Math.round((asUTC - date.getTime()) / 60000);
+}
+
+// Public read (no PAT). Hydrates per-tab lists from the repo when this
+// browser has no documentsState yet. localStorage-wins: if documentsState
+// is present we never overwrite (protects unpushed local edits).
+async function loadDocumentsFromGitHub() {
+  if (lsGet(DOCS_STATE_KEY)) return; // localStorage-wins
+  try {
+    const res = await fetch(`${RAW_BASE}/${DOCUMENTS_JSON_PATH}`, { cache: 'no-cache' });
+    if (!res.ok) return; // file may not exist yet (first deploy)
+    const json = await res.json();
+    if (!json || !json.tabs) return;
+    // Hydrate per-tab list keys only where this browser doesn't already
+    // have an author-set list (don't clobber a tab the user edited locally).
+    Object.keys(json.tabs).forEach(tabId => {
+      if (lsGet(pdfListKey(tabId))) return;
+      const entry = json.tabs[tabId];
+      if (!entry || !Array.isArray(entry.list)) return;
+      lsSet(pdfListKey(tabId), JSON.stringify(entry.list));
+      if (entry.active) lsSet(pdfActiveKey(tabId), String(entry.active));
+    });
+    lsSet(DOCS_STATE_KEY, JSON.stringify({ ...json, source: 'github-raw', pulledAt: Date.now() }));
+  } catch (e) {
+    console.warn('Could not load documents.json from GitHub raw', e);
+  }
+}
+
+// Migration on first run after deploy: if the primary browser already has
+// per-tab lists in localStorage but no documentsState marker yet, adopt
+// the current lists as the canonical state and mark dirty so the next
+// push boundary writes data/documents.json to the repo. Legacy single-doc
+// keys (pdf-ref:<id>) are already folded into lists by getPdfList().
+function migrateLegacyDocumentsState() {
+  if (lsGet(DOCS_STATE_KEY)) return; // already initialised
+  let hasLocalLists = false;
+  TABS.forEach(t => { if (lsGet(pdfListKey(t.id))) hasLocalLists = true; });
+  if (!hasLocalLists) return; // nothing to migrate; will fetch from repo instead
+  const state = serializeDocuments();
+  lsSet(DOCS_STATE_KEY, JSON.stringify({ ...state, source: 'local-migrated', migratedAt: Date.now() }));
+  docsMarkDirty(); // next push boundary will create data/documents.json
+}
+
+async function pushDocumentsConfig() {
+  const settings = getGhSettings();
+  if (!settings || !settings.token) throw new Error('Sync not configured');
+  const state = serializeDocuments();
+  const content = JSON.stringify(state, null, 2) + '\n';
+  let sha = lsGet(DOCS_SHA_KEY);
+  if (!sha) {
+    try {
+      const existing = await ghGetFile(settings, DOCUMENTS_JSON_PATH);
+      if (existing) sha = existing.sha;
+    } catch {}
+  }
+  const result = await ghPutFile(settings, DOCUMENTS_JSON_PATH, content, sha,
+    'notebook: documents config (Solution C)');
+  if (result && result.content && result.content.sha) {
+    lsSet(DOCS_SHA_KEY, result.content.sha);
+  }
+  // Keep local documentsState in sync with what we just pushed.
+  lsSet(DOCS_STATE_KEY, JSON.stringify({ ...state, source: 'local-pushed', pushedAt: Date.now() }));
+  docsClearDirty();
+  return true;
+}
+
+async function pullDocumentsConfig() {
+  const settings = getGhSettings();
+  if (!settings || !settings.token) throw new Error('Sync not configured');
+  const file = await ghGetFile(settings, DOCUMENTS_JSON_PATH);
+  if (!file) return null;
+  lsSet(DOCS_SHA_KEY, file.sha);
+  let json;
+  try { json = JSON.parse(file.content); } catch { return null; }
+  if (!json || !json.tabs) return null;
+  // Overwrite local lists from repo (manual Pull = explicit overwrite).
+  Object.keys(json.tabs).forEach(tabId => {
+    const entry = json.tabs[tabId];
+    if (!entry || !Array.isArray(entry.list)) return;
+    lsSet(pdfListKey(tabId), JSON.stringify(entry.list));
+    if (entry.active) lsSet(pdfActiveKey(tabId), String(entry.active));
+  });
+  lsSet(DOCS_STATE_KEY, JSON.stringify({ ...json, source: 'github-pull', pulledAt: Date.now() }));
+  docsClearDirty();
+  return json;
+}
+
+// Auto-push the documents config on the same boundaries as Reflections,
+// but only when autoSync is on and the config is dirty.
+async function maybeAutoPushDocuments() {
+  if (!docsIsDirty()) return;
+  const settings = getGhSettings();
+  if (!settings || !settings.token || !settings.autoSync) return;
+  try {
+    await pushDocumentsConfig();
+  } catch (e) {
+    console.warn('Documents auto-push failed', e);
+    toast('Documents auto-push failed: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
 // DATELINE — provenance marker auto-inserted at the start of each
 // new Reflection entry. Format: "**Lisbon, 13 May 2026** · Unix: <epoch>".
 // The human-readable date is in Europe/Lisbon time (the author's
@@ -2000,6 +2177,7 @@ function getPdfList(tabId) {
 }
 function setPdfList(tabId, list) {
   lsSet(pdfListKey(tabId), JSON.stringify(list));
+  if (typeof docsMarkDirty === 'function') docsMarkDirty();
 }
 
 function getActivePdfId(tabId) {
@@ -2015,6 +2193,7 @@ function getActivePdfId(tabId) {
 
 function setActivePdfId(tabId, id) {
   lsSet(pdfActiveKey(tabId), String(id));
+  if (typeof docsMarkDirty === 'function') docsMarkDirty();
 }
 
 function nextPdfId(list) {
@@ -2224,6 +2403,7 @@ function clearSources() {
   lsDel(pdfActiveKey(tabId));
   lsDel(pdfRefKey(tabId)); // also clear legacy key
   lsDel(repoRefKey(tabId));
+  if (typeof docsMarkDirty === 'function') docsMarkDirty();
   toast('Cleared');
   loadAndRenderPdf();
   loadAndRenderRepo();
@@ -2478,6 +2658,7 @@ function clearGhSettings() {
   lsDel('pat-expiry');
   // Clear stored SHAs
   TABS.forEach(t => lsDel('gh-sha:' + t.id));
+  lsDel(DOCS_SHA_KEY);
 }
 
 function utf8ToBase64(str) {
@@ -2672,7 +2853,16 @@ document.getElementById('ghPullBtn').addEventListener('click', async () => {
     }
   }
   loadAndRenderReflection();
-  setGhStatus(`Pull complete — pulled: ${pulled}, missing in repo: ${missing}, errors: ${errors}.`, errors ? 'err' : 'ok');
+  let docNote = '';
+  try {
+    const pulledDocs = await pullDocumentsConfig();
+    docNote = pulledDocs ? ' · documents config pulled' : ' · no documents config in repo';
+    loadAndRenderPdf();
+  } catch (e) {
+    console.warn('Documents pull failed', e);
+    docNote = ' · documents pull failed';
+  }
+  setGhStatus(`Pull complete — pulled: ${pulled}, missing in repo: ${missing}, errors: ${errors}.${docNote}`, errors ? 'err' : 'ok');
   toast(`Pulled ${pulled} tab(s)`, 'success');
 });
 
@@ -2692,7 +2882,15 @@ document.getElementById('ghPushBtn').addEventListener('click', async () => {
       errors++;
     }
   }
-  setGhStatus(`Push complete — pushed: ${pushed}, errors: ${errors}.`, errors ? 'err' : 'ok');
+  let docNote = '';
+  try {
+    await pushDocumentsConfig();
+    docNote = ' · documents config pushed';
+  } catch (e) {
+    console.warn('Documents push failed', e);
+    docNote = ' · documents push failed: ' + e.message;
+  }
+  setGhStatus(`Push complete — pushed: ${pushed}, errors: ${errors}.${docNote}`, errors ? 'err' : 'ok');
   toast(`Pushed ${pushed} tab(s)`, 'success');
 });
 
@@ -2797,6 +2995,9 @@ function pushIfDirty() {
   if (currentTab && typeof maybeAutoPush === 'function') {
     maybeAutoPush(currentTab.id);
   }
+  if (typeof maybeAutoPushDocuments === 'function') {
+    maybeAutoPushDocuments();
+  }
 }
 
 
@@ -2875,8 +3076,20 @@ document.addEventListener('visibilitychange', () => {
 
 renderTabList();
 const lastTab = Number(lsGet('lastTab')) || 1;
-selectTab(lastTab);
-renderPatExpiryWarn();
+
+// Solution C boot: settle the documents config before the first tab
+// renders, so a fresh browser shows repo-canonical documents (not the
+// hardcoded defaults) and the author's primary browser migrates its
+// existing per-tab lists into the new system on first run.
+(async function bootDocuments() {
+  migrateLegacyDocumentsState();   // primary browser: adopt local lists, mark dirty
+  await loadDocumentsFromGitHub(); // fresh browser: hydrate from data/documents.json
+  selectTab(lastTab);
+  renderPatExpiryWarn();
+  // If migration marked the config dirty and autoSync is on, push it now
+  // so the canonical file is created without waiting for a blur boundary.
+  if (typeof maybeAutoPushDocuments === 'function') maybeAutoPushDocuments();
+})();
 
 // Configure marked
 if (window.marked) {
